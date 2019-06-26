@@ -40,7 +40,11 @@ class MainPage extends State<MainActivity> {
   void initState(){
     /* Memanggil metode createDefaultEvent */
     createDefaultEvent();
+
     super.initState();
+    
+    /* Memuat data pada ListView */
+    _refreshList();
   }
 
   /* Metode untuk membuat event/acara otomatis
