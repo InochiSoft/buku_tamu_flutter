@@ -3,6 +3,7 @@ import 'model.dart';
 import 'database.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 
+/* Activity  untuk menambah atau mengedit event/acara */
 class EventActivity extends StatefulWidget {
   const EventActivity({Key key, this.event}) : super(key: key);
   final EventItem event;
@@ -20,25 +21,28 @@ class EventPage extends State<EventActivity>{
   String _selName = '';
   String _selAddress = '';
 
-  TextEditingController _controllerDate;
-  TextEditingController _controllerTime;
-  TextEditingController _controllerName;
-  TextEditingController _controllerAddress;
+  TextEditingController _controllerDate = new TextEditingController();
+  TextEditingController _controllerTime = new TextEditingController();
+  TextEditingController _controllerName = new TextEditingController();
+  TextEditingController _controllerAddress = new TextEditingController();
 
+  /* Inisialisasi awal */
   @override
   void initState() {
+    /* Mengambil nilai dari widget.event dan mengisinya ke _event */
     _event = widget.event;
-    _controllerDate = new TextEditingController();
-    _controllerTime = new TextEditingController();
-    _controllerName = new TextEditingController();
-    _controllerAddress = new TextEditingController();
 
+    /* Jika _event/widget.event tidak null
+      (mode pengeditan event)
+    */
     if (_event != null){
+      /* mengambil data event sebelumnya */
       _selName = _event.eventName;
       _selAddress = _event.eventAddress;
       _selDate = formatDate(new DateTime.fromMillisecondsSinceEpoch(_event.eventDate));
       _selTime = formatTime(new TimeOfDay.fromDateTime(new DateTime.fromMillisecondsSinceEpoch(_event.eventTime)));
 
+      /* Menampilkan pada TextField melalui perantara TextEditingController */
       _controllerName.text = _selName;
       _controllerAddress.text = _selAddress;
       _controllerDate.text = _selDate;
@@ -48,6 +52,16 @@ class EventPage extends State<EventActivity>{
     super.initState();
   }
 
+  /* Fungsi untuk mengonversi angka di bawah 10 menjadi 2 digit.
+     Misalnya: 01, 02, 03, dst sampai 09
+  */
+  String sprintF(var number){
+    return number.toString().padLeft(2, "0");
+  }
+
+  /* Mengonversi tipe DateTime menjadi format tanggal.
+     Misalnya: 2-02-2019
+  */
   String formatDate(DateTime date){
     int year = date.year;
     int month = date.month;
@@ -56,6 +70,9 @@ class EventPage extends State<EventActivity>{
     return day.toString() + "-" + sprintF(month)+ "-" + year.toString();
   }
 
+  /* Mengonversi tipe TimeOfDay menjadi format waktu.
+     Misalnya: 08:09
+  */
   String formatTime(TimeOfDay time){
     int hour = time.hour;
     int minute = time.minute;
@@ -63,10 +80,7 @@ class EventPage extends State<EventActivity>{
     return sprintF(hour) + ":" + sprintF(minute);
   }
 
-  String sprintF(var number){
-    return number.toString().padLeft(2, "0");
-  }
-
+  /* Fungsi untuk menampilkan dialog DatePicker */
   Future selectDate() async {
     DateTime picked = await showDatePicker(
         context: context,
@@ -76,11 +90,14 @@ class EventPage extends State<EventActivity>{
     );
     if(picked != null)
       setState(() {
+        /* Menyimpan nilai pada _selDate */
         _selDate = formatDate(picked);
+        /* Menampilkan pada TextField */
         _controllerDate.text = _selDate;
       });
   }
 
+  /* Fungsi untuk menampilkan dialog TimePicker */
   Future selectTime() async {
     TimeOfDay picked = await showTimePicker(
       context: context,
@@ -89,6 +106,7 @@ class EventPage extends State<EventActivity>{
         minute: DateTime.now().minute),
       builder: (BuildContext context, Widget child) {
         return MediaQuery(
+          /* Menggunakan format 24 jam (00-23) */
           data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
           child: child,
         );
@@ -96,21 +114,27 @@ class EventPage extends State<EventActivity>{
     );
     if(picked != null)
       setState(() {
+        /* Menyimpan nilai pada _selTime */
         _selTime = formatTime(picked);
+        /* Menampilkan pada TextField */
         _controllerTime.text = _selTime;
       });
   }
 
+  /* Metode untuk menyimpan event */
   void saveEvent(){
     bool isNew = false;
 
+    /* Jika _event null (tidak ada kiriman event dari Navigator) */
     if (_event == null){
       _event = new EventItem();
       _event.isCompleted = 0;
 
+      /* Tandai sebagai event baru */
       isNew = true;
     }
 
+    /* Mengisi variabel _event */
     _event.eventName = _selName;
     _event.eventAddress = _selAddress;
 
@@ -118,6 +142,13 @@ class EventPage extends State<EventActivity>{
     int month = DateTime.now().month;
     int day = DateTime.now().day;
 
+    /* Mengisi _event.createDate dengan millisecond saat ini
+       (saat tombol ditap)
+    */
+    _event.createDate = DateTime.now().millisecondsSinceEpoch;
+
+    /* Mengonversi data dari TextField */
+    /* Jika _selDate tidak kosong (jika memilih tanggal) */
     if (_selDate.isNotEmpty){
       List<String> arrDate = _selDate.split("-");
       if (arrDate.length == 3){
@@ -128,13 +159,13 @@ class EventPage extends State<EventActivity>{
     }
 
     var selDTDate = new DateTime(year, month, day, 0, 0, 0);
-
-    _event.createDate = DateTime.now().millisecondsSinceEpoch;
     _event.eventDate = selDTDate.millisecondsSinceEpoch;
 
     int hour = DateTime.now().hour;
     int minute = DateTime.now().minute;
 
+    /* Mengonversi data dari TextField */
+    /* Jika _selTime tidak kosong (jika memilih waktu) */
     if (_selTime.isNotEmpty){
       List<String> arrTime = _selTime.split(":");
       if (arrTime.length >= 2){
@@ -146,31 +177,42 @@ class EventPage extends State<EventActivity>{
     var selDTTime = new DateTime(year, month, day, hour, minute, 0);
     _event.eventTime = selDTTime.millisecondsSinceEpoch;
 
+    DatabaseProvider databaseProvider = new DatabaseProvider();
+    /* Jika event merupakan event baru */
     if (isNew){
-      DatabaseProvider databaseProvider = new DatabaseProvider();
+      /* Membuka database */
       databaseProvider.open().then((value){
+        /* Menambahkan event ke database */
         databaseProvider.insertEvent(_event).then((event) {
+          /* Menampilkan Toast */
           Fluttertoast.showToast(
               msg: "Acara berhasil ditambahkan",
               toastLength: Toast.LENGTH_SHORT,
               gravity: ToastGravity.CENTER,
               timeInSecForIos: 1
           );
+          /* Menutup database */
           databaseProvider.close();
+          /* Menutup activity */
           Navigator.pop(context, _event);
         });
       });
+    /* Jika event bukan merupakan event baru (mode edit) */
     } else {
-      DatabaseProvider databaseProvider = new DatabaseProvider();
+      /* Membuka database */
       databaseProvider.open().then((value){
+        /* Memperbarui event di database */
         databaseProvider.updateEvent(_event).then((event) {
+          /* Menampilkan Toast */
           Fluttertoast.showToast(
               msg: "Acara berhasil diperbarui",
               toastLength: Toast.LENGTH_SHORT,
               gravity: ToastGravity.CENTER,
               timeInSecForIos: 1
           );
+          /* Menutup database */
           databaseProvider.close();
+          /* Menutup activity dan mengirim _event ke Navigator */
           Navigator.pop(context, _event);
         });
       });
@@ -184,6 +226,9 @@ class EventPage extends State<EventActivity>{
         title: Text("Tambah Acara"),
       ),
       body: Stack(
+        /* Mnggunakan widget Stack agar dapat memanfaatkan widget Positioned.
+        Positioned.fill digunakan untuk membuat tampilan satu layar penuh
+        */
         children: <Widget>[
           Positioned.fill(
             child: Container(
@@ -218,7 +263,8 @@ class EventPage extends State<EventActivity>{
                           ),
                         ),
                         child: Padding(
-                          padding: EdgeInsets.symmetric(vertical: 0, horizontal: 20.0),
+                          padding: EdgeInsets.symmetric(vertical: 0,
+                              horizontal: 20.0),
                           child: Row(
                             children: <Widget>[
                               Container(
@@ -256,7 +302,8 @@ class EventPage extends State<EventActivity>{
                           ),
                         ),
                         child: Padding(
-                          padding: EdgeInsets.symmetric(vertical: 0, horizontal: 20.0),
+                          padding: EdgeInsets.symmetric(vertical: 0,
+                              horizontal: 20.0),
                           child: Row(
                             children: <Widget>[
                               Container(
@@ -294,7 +341,8 @@ class EventPage extends State<EventActivity>{
                           ),
                         ),
                         child: Padding(
-                          padding: EdgeInsets.symmetric(vertical: 0, horizontal: 20.0),
+                          padding: EdgeInsets.symmetric(vertical: 0,
+                              horizontal: 20.0),
                           child: Row(
                             children: <Widget>[
                               Container(
@@ -338,7 +386,8 @@ class EventPage extends State<EventActivity>{
                           ),
                         ),
                         child: Padding(
-                          padding: EdgeInsets.symmetric(vertical: 0, horizontal: 20.0),
+                          padding: EdgeInsets.symmetric(vertical: 0,
+                              horizontal: 20.0),
                           child: Row(
                             children: <Widget>[
                               Container(

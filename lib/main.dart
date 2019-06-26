@@ -20,6 +20,7 @@ class MainApp extends StatelessWidget {
   }
 }
 
+/* Activity utama, untuk menampilkan daftar event/acara */
 class MainActivity extends StatefulWidget {
   MainActivity({Key key, this.title}) : super(key: key);
 
@@ -34,17 +35,26 @@ class MainPage extends State<MainActivity> {
   List<EventItem> _listEvent = new List();
   DatabaseProvider databaseProvider = new DatabaseProvider();
 
+  /* Inisialisasi awal */
   @override
   void initState(){
+    /* Memanggil metode createDefaultEvent */
     createDefaultEvent();
     super.initState();
   }
 
+  /* Metode untuk membuat event/acara otomatis
+     saat tabel belum mempunyai satupun baris acara
+  */
   void createDefaultEvent(){
+    /* Membuka koneksi ke database */
     databaseProvider.open().then((_){
+      /* Memanggil fungsi getListEvent untuk mengoleksi daftar event */
       databaseProvider.getListEvent().then((list){
         if (list != null){
+          /* Ketika daftar event kosong */
           if (list.length == 0){
+            /* Membuat event baru */
             EventItem eventDef = new EventItem();
 
             eventDef.eventName = "Perkawinan Jang Karim dan Nyi Imas";
@@ -57,7 +67,9 @@ class MainPage extends State<MainActivity> {
             eventDef.eventTime = currTime;
             eventDef.createDate = currTime;
 
+            /* Memasukan event baru ke tabel */
             databaseProvider.insertEvent(eventDef).then((event) {
+              /* Menutup database setelah proses input */
               databaseProvider.close();
             });
           }
@@ -66,23 +78,34 @@ class MainPage extends State<MainActivity> {
     });
   }
 
+  /* Metode untuk memuat ulang daftar event */
   void _refreshList() {
+    /* Membuka database */
     databaseProvider.open().then((_){
+      /* Memanggil fungsi getListEvent untuk mengambil daftar event */
       databaseProvider.getListEvent().then((list){
         if (list != null){
+          /* Memperbarui variabel _listEvent */
           setState(() {
             _listEvent = list;
           });
+          /* Menutup database */
           databaseProvider.close();
         }
       });
     });
   }
 
+  /* Fungsi untuk mengonversi angka di bawah 10 menjadi 2 digit.
+     Misalnya: 01, 02, 03, dst sampai 09
+  */
   String sprintF(var number){
     return number.toString().padLeft(2, "0");
   }
 
+  /* Mengonversi millisecond (unix time) menjadi format tanggal.
+     Misalnya: 22 Januari 2019
+  */
   String formatDate(int millis){
     if (millis != null){
       var date = new DateTime.fromMillisecondsSinceEpoch(millis);
@@ -99,6 +122,9 @@ class MainPage extends State<MainActivity> {
     return '';
   }
 
+  /* Mengonversi millisecond (unix time) menjadi format waktu.
+     Misalnya: 23:59
+  */
   String formatTime(int millis){
     if (millis != null){
       var date = new DateTime.fromMillisecondsSinceEpoch(millis);
@@ -110,6 +136,7 @@ class MainPage extends State<MainActivity> {
     return '';
   }
 
+  /* Fungsi untuk membuat widget item dari ListView */
   Widget createEventItem(EventItem event){
     return Card(
       elevation: 4.0,
@@ -136,10 +163,13 @@ class MainPage extends State<MainActivity> {
           ),
         ),
         child: InkWell(
+          /* Saat baris widget ditap */
           onTap: () {
+            /* Simpan nilai event pada variabel _event */
             setState(() {
               _event = event;
             });
+            /* Memanggil GuestsActivity */
             showGuestsActivity();
           },
           child: Padding(
@@ -190,10 +220,13 @@ class MainPage extends State<MainActivity> {
                     Material(
                       color: Colors.transparent,
                       child: InkWell(
+                        /* Saat tombol edit (pensil) ditap */
                         onTap: (){
+                          /* Simpan nilai event pada variabel _event */
                           setState(() {
                             _event = event;
                           });
+                          /* Memanggil EventActivity untuk pengeditan event */
                           showEventActivity();
                         },
                         child: Padding(
@@ -207,11 +240,14 @@ class MainPage extends State<MainActivity> {
                     Material(
                       color: Colors.transparent,
                       child: InkWell(
+                        /* Saat tombol hapus (tong sampah) ditap */
                         onTap: (){
                           if (_listEvent.length > 0){
+                            /* Simpan nilai event pada variabel _event */
                             setState(() {
                               _event = event;
                             });
+                            /* Menampilkan dialog konfirmasi penghaspusan */
                             showDeleteDialog();
                           }
                         },
@@ -233,11 +269,13 @@ class MainPage extends State<MainActivity> {
     );
   }
 
+  /* Fungsi untuk membangun daftar item dari ListView */
   Widget listViewBuilder(BuildContext context, int index){
     EventItem event = _listEvent[index];
     return createEventItem(event);
   }
 
+  /* Metode untuk menampilkan EventActivity */
   void showEventActivity(){
     Navigator.push(
       context,
@@ -245,6 +283,7 @@ class MainPage extends State<MainActivity> {
         builder: (context) => EventActivity(event: _event,),
       ),
     ).then((value){
+      /* memuat ulang ListView saat MainActivity tampil kembali */
       if (value != null)
       setState(() {
         _refreshList();
@@ -252,20 +291,18 @@ class MainPage extends State<MainActivity> {
     });
   }
 
+  /* Metode untuk menampilkan GuestsActivity */
   void showGuestsActivity(){
     Navigator.push(
       context,
       MaterialPageRoute(
+        /* Memangil GuestsActivity sambil mengirim obyek _event */
         builder: (context) => GuestsActivity(event: _event,),
       ),
-    ).then((value){
-      if (value != null)
-        setState(() {
-
-        });
-    });
+    );
   }
 
+  /* Metode untuk menampilkan dialog konfirmasi penghapusan event */
   void showDeleteDialog() {
     showDialog(
       context: context,
@@ -276,19 +313,30 @@ class MainPage extends State<MainActivity> {
           actions: <Widget>[
             FlatButton(
               child: Text("Ya"),
+              /* Saat mengetap/mengklik tombol Ya pada dialog */
               onPressed: () {
+                /* Membuka database */
                 databaseProvider.open().then((value){
+                  /* Menghapus event dari database */
                   databaseProvider.deleteEvent(_event.eventId).then((event) {
+                    /* Menampilkan Toast setelah penghapusan */
                     Fluttertoast.showToast(
                         msg: "Acara berhasil dihapus",
                         toastLength: Toast.LENGTH_SHORT,
                         gravity: ToastGravity.CENTER,
                         timeInSecForIos: 1
                     );
+                    /* Menghapus item event dari _listEvent.
+                       Menggunakan setState agar item-item pada
+                       _listEvent diperbarui sehingga daftar item
+                       pada ListView ikut diperbarui
+                    */
                     setState(() {
                       _listEvent.remove(event);
                     });
+                    /* Menutup database */
                     databaseProvider.close();
+                    /* Menutup dialog */
                     Navigator.of(context).pop();
                   });
                 });
@@ -296,7 +344,9 @@ class MainPage extends State<MainActivity> {
             ),
             FlatButton(
               child: Text("Tidak"),
+              /* Saat mengetap/mengklik tombol Tidak pada dialog */
               onPressed: () {
+                /* Menutup dialog */
                 Navigator.of(context).pop();
               },
             ),
@@ -334,6 +384,7 @@ class MainPage extends State<MainActivity> {
           IconButton(
             icon: Icon(Icons.refresh),
             tooltip: 'Refresh',
+            /* Memuat data pada ListView saat tombol Refresh ditap */
             onPressed: _refreshList
           ),
         ],
@@ -378,21 +429,31 @@ class MainPage extends State<MainActivity> {
                     vertical: 8.0,
                     horizontal: 16.0,
                   ),
+                  /* Menggunakan FutureBuilder untuk mengakses database */
                   child: FutureBuilder(
                     future: databaseProvider.open(),
                     builder: (BuildContext context, AsyncSnapshot snapshot){
+                      /* Saat koneksi ke database berhasil terhubung */
                       if (snapshot.connectionState == ConnectionState.done) {
                         return FutureBuilder(
+                          /* Menggunakan FutureBuilder untuk mengambil daftar event */
                           future: databaseProvider.getListEvent(),
                           builder: (BuildContext context, AsyncSnapshot snapshot){
+                            /* Saat pemanggilan fungsi mendapatkan data */
                             if (snapshot.hasData) {
                               if (snapshot.data != null) {
+                                /* Mengisi variabel _listEvent dari data snapshot */
                                 _listEvent = snapshot.data;
                                 databaseProvider.close();
 
+                                /* Saat _listEvent kosong */
                                 if (_listEvent.length == 0){
+                                  /* Tampilkan widget _blank */
                                   return _blank;
+
+                                /* Saat _listEvent tidak kosong */
                                 } else {
+                                  /* Bangun widget ListView */
                                   return ListView.builder(
                                     itemCount: _listEvent.length,
                                     itemBuilder: listViewBuilder,
@@ -418,10 +479,13 @@ class MainPage extends State<MainActivity> {
         ),
       ),
       floatingActionButton: FloatingActionButton(
+        /* Saat FloatingActionButton ditap */
         onPressed:(){
+          /* Null-kan nilai _event */
           setState(() {
             _event = null;
           });
+          /* Memanggil EventActivity */
           showEventActivity();
         },
         backgroundColor: Colors.brown.shade200,

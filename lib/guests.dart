@@ -4,6 +4,7 @@ import 'model.dart';
 import 'database.dart';
 import 'guest.dart';
 
+/* Activity  untuk menampilkan daftar guest/tamu */
 class GuestsActivity extends StatefulWidget {
   GuestsActivity({Key key, this.event}) : super(key: key);
 
@@ -19,29 +20,46 @@ class GuestsPage extends State<GuestsActivity> {
   List<GuestItem> _listGuest = new List();
   DatabaseProvider databaseProvider = new DatabaseProvider();
 
+  /* Inisialisasi awal */
   @override
   void initState(){
+    /* Mengambil nilai widget.event yang dikirim Navigator
+       dan mengisikan ke variabel _event
+    */
     _event = widget.event;
     super.initState();
   }
 
+  /* Metode untuk memuat ulang daftar guest */
   void _refreshList() {
+    /* Membuka database */
     databaseProvider.open().then((_){
+      /* Memanggil fungsi getListGuest untuk mengambil daftar guest
+         berdasarkan eventId dari _event
+      */
       databaseProvider.getListGuest(_event.eventId).then((list){
         if (list != null){
+          /* Memperbarui variabel _listGuest */
           setState(() {
             _listGuest = list;
           });
+          /* Menutup database */
           databaseProvider.close();
         }
       });
     });
   }
 
+  /* Fungsi untuk mengonversi angka di bawah 10 menjadi 2 digit.
+     Misalnya: 01, 02, 03, dst sampai 09
+  */
   String sprintF(var number){
     return number.toString().padLeft(2, "0");
   }
 
+  /* Mengonversi millisecond (unix time) menjadi format tanggal.
+     Misalnya: 24 Maret 2019
+  */
   String formatDate(int millis){
     var date = new DateTime.fromMillisecondsSinceEpoch(millis);
     int year = date.year;
@@ -55,6 +73,9 @@ class GuestsPage extends State<GuestsActivity> {
     return day.toString() + " " + monthNames[month] + " " + year.toString();
   }
 
+  /* Mengonversi millisecond (unix time) menjadi format waktu.
+     Misalnya: 08:09
+  */
   String formatTime(int millis){
     var date = new DateTime.fromMillisecondsSinceEpoch(millis);
     int hour = date.hour;
@@ -63,6 +84,7 @@ class GuestsPage extends State<GuestsActivity> {
     return sprintF(hour) + ":" + sprintF(minute);
   }
 
+  /* Fungsi untuk membuat widget item dari ListView */
   Widget createGuestItem(GuestItem guest){
     return Card(
       elevation: 4.0,
@@ -74,10 +96,13 @@ class GuestsPage extends State<GuestsActivity> {
           ),
         ),
         child: InkWell(
+          /* Saat baris widget ditap */
           onTap: () {
+            /* Simpan nilai guest pada variabel _guest */
             setState(() {
               _guest = guest;
             });
+            /* Memanggil GuestsActivity untuk pengeditan guest */
             showGuestActivity();
           },
           child: Row(
@@ -113,9 +138,15 @@ class GuestsPage extends State<GuestsActivity> {
                             ),
                           ),
                           InkWell(
+                            /* Saat tombol hapus (tong sampah) ditap */
                             onTap: (){
                               if (_listGuest.length > 0){
-                                showDeleteDialog(guest);
+                                /* Simpan nilai guest pada variabel _guest */
+                                setState(() {
+                                  _guest = guest;
+                                });
+                                /* Menampilkan dialog konfirmasi penghaspusan */
+                                showDeleteDialog();
                               }
                             },
                             child: Padding(
@@ -215,11 +246,13 @@ class GuestsPage extends State<GuestsActivity> {
     );
   }
 
+  /* Fungsi untuk membangun daftar item dari ListView */
   Widget listViewBuilder(BuildContext context, int index){
     GuestItem guest = _listGuest[index];
     return createGuestItem(guest);
   }
 
+  /* Metode untuk menampilkan GuestActivity */
   void showGuestActivity(){
     Navigator.push(
       context,
@@ -227,6 +260,7 @@ class GuestsPage extends State<GuestsActivity> {
         builder: (context) => GuestActivity(event: _event, guest: _guest,),
       ),
     ).then((value){
+      /* memuat ulang ListView saat GuestsActivity tampil kembali */
       if (value != null)
         setState(() {
           _refreshList();
@@ -234,7 +268,8 @@ class GuestsPage extends State<GuestsActivity> {
     });
   }
 
-  void showDeleteDialog(GuestItem guest) {
+  /* Metode untuk menampilkan dialog konfirmasi penghapusan guest */
+  void showDeleteDialog() {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -243,21 +278,31 @@ class GuestsPage extends State<GuestsActivity> {
           content: Text("Ingin menghapus tamu?"),
           actions: <Widget>[
             FlatButton(
+              /* Saat mengetap/mengklik tombol Ya pada dialog */
               child: Text("Ya"),
               onPressed: () {
+                /* Membuka database */
                 databaseProvider.open().then((value){
-                  databaseProvider.deleteGuest(guest.guestId).then((event) {
+                  /* Menghapus guest dari database */
+                  databaseProvider.deleteGuest(_guest.guestId).then((guest) {
+                    /* Menampilkan Toast setelah penghapusan */
                     Fluttertoast.showToast(
                         msg: "Tamu berhasil dihapus",
                         toastLength: Toast.LENGTH_SHORT,
                         gravity: ToastGravity.CENTER,
                         timeInSecForIos: 1
                     );
+                    /* Menghapus item guest dari _listGuest.
+                       Menggunakan setState agar item-item pada
+                       _listGuest diperbarui sehingga daftar item
+                       pada ListView ikut diperbarui
+                    */
                     setState(() {
-                      _listGuest.remove(event);
+                      _listGuest.remove(guest);
                     });
-
+                    /* Menutup database */
                     databaseProvider.close();
+                    /* Menutup dialog */
                     Navigator.of(context).pop();
                   });
                 });
@@ -265,7 +310,9 @@ class GuestsPage extends State<GuestsActivity> {
             ),
             FlatButton(
               child: Text("Tidak"),
+              /* Saat mengetap/mengklik tombol Tidak pada dialog */
               onPressed: () {
+                /* Menutup dialog */
                 Navigator.of(context).pop();
               },
             ),
@@ -303,6 +350,7 @@ class GuestsPage extends State<GuestsActivity> {
           IconButton(
               icon: Icon(Icons.refresh),
               tooltip: 'Refresh',
+              /* Memuat data pada ListView saat tombol Refresh ditap */
               onPressed: _refreshList
           ),
         ],
@@ -348,21 +396,31 @@ class GuestsPage extends State<GuestsActivity> {
                     vertical: 8.0,
                     horizontal: 16.0,
                   ),
+                  /* Menggunakan FutureBuilder untuk mengakses database */
                   child: FutureBuilder(
                     future: databaseProvider.open(),
                     builder: (BuildContext context, AsyncSnapshot snapshot){
+                      /* Saat koneksi ke database berhasil terhubung */
                       if (snapshot.connectionState == ConnectionState.done) {
+                        /* Menggunakan FutureBuilder untuk mengambil daftar guest */
                         return FutureBuilder(
                           future: databaseProvider.getListGuest(_event.eventId),
                           builder: (BuildContext context, AsyncSnapshot snapshot){
+                            /* Saat pemanggilan fungsi mendapatkan data */
                             if (snapshot.hasData) {
                               if (snapshot.data != null) {
+                                /* Mengisi variabel _listGuest dari data snapshot */
                                 _listGuest = snapshot.data;
                                 databaseProvider.close();
 
+                                /* Saat _listEvent kosong */
                                 if (_listGuest.length == 0){
+                                  /* Tampilkan widget _blank */
                                   return _blank;
+
+                                /* Saat _listGuest tidak kosong */
                                 } else {
+                                  /* Bangun widget ListView */
                                   return ListView.builder(
                                     itemCount: _listGuest.length,
                                     itemBuilder: listViewBuilder,

@@ -3,6 +3,7 @@ import 'model.dart';
 import 'database.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 
+/* Activity untuk menambah atau mengedit guest/tamu */
 class GuestActivity extends StatefulWidget {
   const GuestActivity({Key key, this.event, this.guest}) : super(key: key);
   final EventItem event;
@@ -24,33 +25,37 @@ class GuestPage extends State<GuestActivity>{
   String _selEmail = '';
   String _selNote = '';
 
-  TextEditingController _controllerVisitTime;
-  TextEditingController _controllerName;
-  TextEditingController _controllerAddress;
-  TextEditingController _controllerPhone;
-  TextEditingController _controllerEmail;
-  TextEditingController _controllerNote;
+  TextEditingController _controllerVisitTime = new TextEditingController();
+  TextEditingController _controllerName = new TextEditingController();
+  TextEditingController _controllerAddress = new TextEditingController();
+  TextEditingController _controllerPhone = new TextEditingController();
+  TextEditingController _controllerEmail = new TextEditingController();
+  TextEditingController _controllerNote = new TextEditingController();
 
+  /* Inisialisasi awal */
   @override
   void initState() {
+    /* Mengambil nilai dari widget.guest dan mengisinya ke _guest */
     _guest = widget.guest;
+    /* Mengambil nilai dari widget.event dan mengisinya ke _event */
     _event = widget.event;
-    _controllerVisitTime = new TextEditingController();
-    _controllerName = new TextEditingController();
-    _controllerAddress = new TextEditingController();
-    _controllerPhone = new TextEditingController();
-    _controllerEmail = new TextEditingController();
-    _controllerNote = new TextEditingController();
 
+    /* Jika _guest/widget.guest tidak null
+      (mode pengeditan guest)
+    */
     if (_guest != null){
+      /* mengambil data guest sebelumnya */
       _selName = _guest.guestFullName;
       _selAddress = _guest.guestAddress;
-      DateTime visitTime = new DateTime.fromMillisecondsSinceEpoch(_guest.guestVisitTime);
-      _selVisitTime = formatDate(visitTime) + " " + formatTime(new TimeOfDay.fromDateTime(visitTime));
+      DateTime visitTime =
+        new DateTime.fromMillisecondsSinceEpoch(_guest.guestVisitTime);
+      _selVisitTime = formatDate(visitTime) + " " +
+        formatTime(new TimeOfDay.fromDateTime(visitTime));
       _selPhone = _guest.guestNoPhone;
       _selEmail = _guest.guestEmail;
       _selNote = _guest.guestNote;
 
+      /* Menampilkan pada TextField melalui perantara TextEditingController */
       _controllerVisitTime.text = _selVisitTime;
       _controllerName.text = _selName;
       _controllerAddress.text = _selAddress;
@@ -62,6 +67,16 @@ class GuestPage extends State<GuestActivity>{
     super.initState();
   }
 
+  /* Fungsi untuk mengonversi angka di bawah 10 menjadi 2 digit.
+     Misalnya: 01, 02, 03, dst sampai 09
+  */
+  String sprintF(var number){
+    return number.toString().padLeft(2, "0");
+  }
+
+  /* Mengonversi tipe DateTime menjadi format tanggal.
+     Misalnya: 2-02-2019
+  */
   String formatDate(DateTime date){
     int year = date.year;
     int month = date.month;
@@ -70,6 +85,9 @@ class GuestPage extends State<GuestActivity>{
     return day.toString() + "-" + sprintF(month)+ "-" + year.toString();
   }
 
+  /* Mengonversi tipe TimeOfDay menjadi format waktu.
+     Misalnya: 08:09
+  */
   String formatTime(TimeOfDay time){
     int hour = time.hour;
     int minute = time.minute;
@@ -77,24 +95,7 @@ class GuestPage extends State<GuestActivity>{
     return sprintF(hour) + ":" + sprintF(minute);
   }
 
-  String sprintF(var number){
-    return number.toString().padLeft(2, "0");
-  }
-
-  Future selectDate() async {
-    DateTime picked = await showDatePicker(
-        context: context,
-        initialDate: new DateTime.now(),
-        firstDate: new DateTime(2018),
-        lastDate: new DateTime(2030)
-    );
-    if(picked != null)
-      setState(() {
-        _selVisitTime = formatDate(picked);
-        _controllerVisitTime.text = _selVisitTime;
-      });
-  }
-
+  /* Fungsi untuk menampilkan dialog TimePicker */
   Future selectTime() async {
     var today = DateTime.now();
     TimeOfDay picked = await showTimePicker(
@@ -104,6 +105,7 @@ class GuestPage extends State<GuestActivity>{
           minute: DateTime.now().minute),
       builder: (BuildContext context, Widget child) {
         return MediaQuery(
+          /* Menggunakan format 24 jam (00-23) */
           data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
           child: child,
         );
@@ -111,21 +113,27 @@ class GuestPage extends State<GuestActivity>{
     );
     if(picked != null)
       setState(() {
+        /* Menyimpan nilai pada _selVisitTime */
         _selVisitTime = formatDate(today) + " " + formatTime(picked);
+        /* Menampilkan pada TextField */
         _controllerVisitTime.text = _selVisitTime;
       });
   }
 
+  /* Metode untuk menyimpan event */
   void saveGuest(){
     bool isNew = false;
 
+    /* Jika _guest null (tidak ada kiriman guest dari Navigator) */
     if (_guest == null){
       _guest = new GuestItem();
       _guest.eventId = _event.eventId;
 
+      /* Tandai sebagai guest baru */
       isNew = true;
     }
 
+    /* Mengisi variabel _guest */
     _guest.guestFullName = _selName;
     _guest.guestAddress = _selAddress;
     _guest.guestNoPhone = _selPhone;
@@ -139,7 +147,10 @@ class GuestPage extends State<GuestActivity>{
     int minute = DateTime.now().minute;
     int second = 0;
 
+    /* Mengonversi data dari TextField */
+    /* Jika _selVisitTime tidak kosong (jika memilih maktu) */
     if (_selVisitTime.isNotEmpty){
+      /* Membagi _selVisitTime menjadi 2 bagian (tanggal dan waktu) */
       List<String> arrDateTime = _selVisitTime.split(" ");
       if (arrDateTime.length >= 2){
         String strDate = arrDateTime[0];
@@ -169,31 +180,41 @@ class GuestPage extends State<GuestActivity>{
     var selVisitTime = new DateTime(year, month, day, hour, minute, second);
     _guest.guestVisitTime = selVisitTime.millisecondsSinceEpoch;
 
+    DatabaseProvider databaseProvider = new DatabaseProvider();
+    /* Jika guest merupakan guest baru */
     if (isNew){
-      DatabaseProvider databaseProvider = new DatabaseProvider();
+      /* Membuka database */
       databaseProvider.open().then((value){
+        /* Menambahkan guest ke database */
         databaseProvider.insertGuest(_guest).then((guest) {
+          /* Menampilkan Toast */
           Fluttertoast.showToast(
               msg: "Tamu berhasil ditambahkan",
               toastLength: Toast.LENGTH_SHORT,
               gravity: ToastGravity.CENTER,
               timeInSecForIos: 1
           );
+          /* Menutup database */
           databaseProvider.close();
+          /* Menutup activity dan mengirim _guest ke Navigator */
           Navigator.pop(context, _guest);
         });
       });
     } else {
-      DatabaseProvider databaseProvider = new DatabaseProvider();
+      /* Membuka database */
       databaseProvider.open().then((value){
+        /* Memperbarui guest di database */
         databaseProvider.updateGuest(_guest).then((guest) {
+          /* Menampilkan Toast */
           Fluttertoast.showToast(
               msg: "Acara berhasil diperbarui",
               toastLength: Toast.LENGTH_SHORT,
               gravity: ToastGravity.CENTER,
               timeInSecForIos: 1
           );
+          /* Menutup database */
           databaseProvider.close();
+          /* Menutup activity dan mengirim _guest ke Navigator */
           Navigator.pop(context, _guest);
         });
       });
@@ -241,7 +262,8 @@ class GuestPage extends State<GuestActivity>{
                           ),
                         ),
                         child: Padding(
-                          padding: EdgeInsets.symmetric(vertical: 0, horizontal: 20.0),
+                          padding: EdgeInsets.symmetric(vertical: 0,
+                              horizontal: 20.0),
                           child: Row(
                             children: <Widget>[
                               Container(
@@ -279,7 +301,8 @@ class GuestPage extends State<GuestActivity>{
                           ),
                         ),
                         child: Padding(
-                          padding: EdgeInsets.symmetric(vertical: 0, horizontal: 20.0),
+                          padding: EdgeInsets.symmetric(vertical: 0,
+                              horizontal: 20.0),
                           child: Row(
                             children: <Widget>[
                               Container(
@@ -323,7 +346,8 @@ class GuestPage extends State<GuestActivity>{
                           ),
                         ),
                         child: Padding(
-                          padding: EdgeInsets.symmetric(vertical: 0, horizontal: 20.0),
+                          padding: EdgeInsets.symmetric(vertical: 0,
+                              horizontal: 20.0),
                           child: Row(
                             children: <Widget>[
                               Container(
@@ -366,7 +390,8 @@ class GuestPage extends State<GuestActivity>{
                           ),
                         ),
                         child: Padding(
-                          padding: EdgeInsets.symmetric(vertical: 0, horizontal: 20.0),
+                          padding: EdgeInsets.symmetric(vertical: 0,
+                              horizontal: 20.0),
                           child: Row(
                             children: <Widget>[
                               Container(
@@ -409,7 +434,8 @@ class GuestPage extends State<GuestActivity>{
                           ),
                         ),
                         child: Padding(
-                          padding: EdgeInsets.symmetric(vertical: 0, horizontal: 20.0),
+                          padding: EdgeInsets.symmetric(vertical: 0,
+                              horizontal: 20.0),
                           child: Row(
                             children: <Widget>[
                               Container(
@@ -455,7 +481,8 @@ class GuestPage extends State<GuestActivity>{
                           ),
                         ),
                         child: Padding(
-                          padding: EdgeInsets.symmetric(vertical: 0, horizontal: 20.0),
+                          padding: EdgeInsets.symmetric(vertical: 0,
+                              horizontal: 20.0),
                           child: Row(
                             children: <Widget>[
                               Container(

@@ -29,8 +29,9 @@ class DatabaseProvider {
           }
         }
         sqlTableEvent += ");";
+
         /* Membuat query pembuatan indeks pada table tblEvent */
-        sqlTableEvent += " CREATE INDEX idx_" + tableEvent + "_" +
+        String indexTableEvent = " CREATE INDEX idx_" + tableEvent + "_" +
             "row_event" + " ON " + tableEvent + " (" +  eventColumns[0].name + ");";
 
         /* Membangun query pembuatan tabel tblGuest */
@@ -43,12 +44,16 @@ class DatabaseProvider {
           }
         }
         sqlTableGuest += ");";
+
         /* Membuat query pembuatan indeks pada table tblGuest */
-        sqlTableGuest += " CREATE INDEX idx_" + tableGuest + "_" +
+        String indexTableGuest = " CREATE INDEX idx_" + tableGuest + "_" +
             "row_guest" + " ON " + tableGuest + " (" + guestColumns[0].name + "," + guestColumns[1].name + ");";
 
+        /* Mengeksekusi query pembuatan tabel-tabel */
         db.execute(sqlTableEvent);
+        db.execute(indexTableEvent);
         db.execute(sqlTableGuest);
+        db.execute(indexTableGuest);
       },
     );
   }
