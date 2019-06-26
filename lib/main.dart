@@ -42,7 +42,7 @@ class MainPage extends State<MainActivity> {
     createDefaultEvent();
 
     super.initState();
-    
+
     /* Memuat data pada ListView */
     _refreshList();
   }
