@@ -225,7 +225,7 @@ class GuestPage extends State<GuestActivity>{
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Tambah Acara"),
+        title: Text("Tambah Tamu"),
       ),
       body: Stack(
         children: <Widget>[

@@ -446,9 +446,12 @@ class GuestsPage extends State<GuestsActivity> {
         ),
       ),
       floatingActionButton: FloatingActionButton(
+        /* Saat FloatingActionButton ditap */
         onPressed: (){
           setState(() {
+            /* Null-kan nilai _guest */
             _guest = null;
+            /* Memanggil GuestActivity */
             showGuestActivity();
           });
         },
